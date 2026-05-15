@@ -27,7 +27,7 @@ import com.mojang.math.Axis;
 
 public class CustomPlayerElytraLayer extends GeoLayerRenderer<CustomPlayerEntity> {
 
-    private static final Identifier WINGS_LOCATION = Identifier.parse("textures/entity/elytra.png");
+    private static final Identifier WINGS_LOCATION = Identifier.parse("textures/entity/equipment/wings/elytra.png");
 
     private final ElytraModel elytraModel;
 
@@ -52,9 +52,8 @@ public class CustomPlayerElytraLayer extends GeoLayerRenderer<CustomPlayerEntity
             }
             poseStack.pushPose();
             renderElytra(poseStack, animatedGeoModel);
-            poseStack.translate(0.0d, 1.5d, 0.0d);
+//            poseStack.translate(0.0d, 1.5d, 0.0d);
             poseStack.mulPose(Axis.ZP.rotationDegrees(180.0f));
-            poseStack.scale(2.0f, 2.0f, 2.0f);
             this.elytraModel.setupAnim(state);
             this.elytraModel.renderToBuffer(poseStack, ItemRenderer.getFoilBuffer(bufferSource, RenderTypes.armorCutoutNoCull(cloakTextureLocation), false, stack.hasFoil()), packedLightIn, OverlayTexture.NO_OVERLAY, -1);
             poseStack.popPose();
