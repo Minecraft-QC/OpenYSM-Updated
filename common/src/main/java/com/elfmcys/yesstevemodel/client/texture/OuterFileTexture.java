@@ -37,11 +37,9 @@ public class OuterFileTexture extends AbstractTexture implements ITextureMap {
         try {
             this.loadedImage = NativeImage.read(new ByteArrayInputStream(data));
             GpuDevice gpuDevice = RenderSystem.getDevice();
-            // USAGE_COPY_DST(1) | USAGE_TEXTURE_BINDING(4) = 5 — uploadable + sampleable.
             this.texture = gpuDevice.createTexture("OutFileTexture", 5, TextureFormat.RGBA8, loadedImage.getWidth(), loadedImage.getHeight(), 1, 1);
             this.textureView = gpuDevice.createTextureView(this.texture);
             gpuDevice.createCommandEncoder().writeToTexture(this.texture, loadedImage);
-            // GL_NEAREST equivalent + REPEAT addressing (was setFilter(false,false) + setClamp(false) pre-1.21.11).
             this.sampler = RenderSystem.getSamplerCache().getSampler(
                 AddressMode.REPEAT, AddressMode.REPEAT,
                 FilterMode.NEAREST, FilterMode.NEAREST,

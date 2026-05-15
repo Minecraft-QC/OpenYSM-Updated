@@ -152,20 +152,6 @@ public class NativeModelRenderer {
 
             for (GeoModel.BakedCube cube : bone.cubes) {
                 for (GeoModel.BakedQuad quad : cube.quads) {
-                    // Skip CPU back-face culling in preview/GUI contexts: the cached
-                    // projMat above is the world perspective matrix, but PIP rendering
-                    // (inventory, paper-doll, preview screens) uses an orthographic
-                    // projection set on RenderSystem at draw time. Culling against the
-                    // wrong matrix drops visible quads.
-//                    if (cube.cullable && !isPreview) {
-//                        p1.set(quad.positions[0].x(), quad.positions[0].y(), quad.positions[0].z(), 1.0f).mul(projBoneMat);
-//                        p2.set(quad.positions[1].x(), quad.positions[1].y(), quad.positions[1].z(), 1.0f).mul(projBoneMat);
-//                        p3.set(quad.positions[2].x(), quad.positions[2].y(), quad.positions[2].z(), 1.0f).mul(projBoneMat);
-//                        float det = p1.x() * (p2.y() * p3.w() - p3.y() * p2.w()) - p2.x() * (p1.y() * p3.w() - p3.y() * p1.w()) + p3.x() * (p1.y() * p2.w() - p2.y() * p1.w());
-//                        if (det <= 0.0f) {
-//                            continue;
-//                        }
-//                    }
                     tempNorm.set(quad.normal).mul(globalNormalMat).normalize();
                     for (int v = 0; v < 4; v++) {
                         tempPos.set(quad.positions[v].x(), quad.positions[v].y(), quad.positions[v].z(), 1.0f).mul(globalBoneMat);

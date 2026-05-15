@@ -80,8 +80,6 @@ public final class GpuMesh {
 
     public void ensureXformBuffers() {
         if (xformVbo != null) return;
-        // USAGE_VERTEX so RenderPass.setVertexBuffer accepts it; USAGE_COPY_DST in case anyone writes to it via writeToBuffer.
-        // Compute shader still binds it as SSBO via the raw GL handle — that path works regardless of the usage hint.
         xformVbo = RenderSystem.getDevice().createBuffer(() -> "ysm-xform-vbo", GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, (long) vertexCount * 36);
     }
 

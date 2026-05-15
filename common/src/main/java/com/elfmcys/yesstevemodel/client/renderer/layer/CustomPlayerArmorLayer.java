@@ -52,9 +52,6 @@ public class CustomPlayerArmorLayer extends GeoLayerRenderer<CustomPlayerEntity>
     private void renderArmorPiece(PoseStack poseStack, MultiBufferSource bufferSource, int i, AnimatedGeoModel model, Player player, ItemStack stack) {
         SubmitNodeCollector collector = RenderContext.collector();
         if (collector == null) {
-            // No active submit pipeline (e.g. preview path that doesn't enter via the Mixin) —
-            // skip armor rendering rather than crash. 1.21.9 ItemInHandRenderer.renderItem requires
-            // a SubmitNodeCollector and there is no MultiBufferSource fallback.
             return;
         }
         poseStack.pushPose();

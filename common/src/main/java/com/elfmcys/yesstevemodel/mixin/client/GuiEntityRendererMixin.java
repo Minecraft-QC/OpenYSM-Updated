@@ -21,26 +21,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * In 1.21.9 entity rendering for inventory previews is deferred through
- * {@link GuiEntityRenderer#renderToTexture} (Picture-in-Picture) using the submit pipeline.
- * Two things go wrong for YSM without this mixin:
- *
- * <ol>
- *   <li>The PIP path uses an orthographic projection. {@code NativeModelRenderer}
- *       consults {@code gameRenderer.getProjectionMatrix(fov)} (the world
- *       perspective) for CPU back-face culling, which is the wrong matrix here.
- *       We flag preview mode for the lifetime of {@code renderToTexture} so the
- *       CPU cull is skipped.</li>
- *   <li>The state-based dispatch ({@code dispatcher.submit(state, ...)}) cannot
- *       carry per-submission entity context, so 10 simultaneously-submitted
- *       {@code ModelButton} thumbnails would collapse onto whichever
- *       {@code ysm$lastRenderingEntity} happened to win the race. We instead
- *       look the originating animatable up in {@link PreviewEntityRegistry}
- *       (keyed on the state identity that we ourselves submitted) and dispatch
- *       to {@link CustomPlayerRenderer#renderEntity} directly.</li>
- * </ol>
- */
 @Mixin(GuiEntityRenderer.class)
 public class GuiEntityRendererMixin {
 
@@ -75,22 +55,15 @@ public class GuiEntityRendererMixin {
                 MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
                 RenderContext.enter(collector, cameraState);
                 try {
-                    // Scenery (ground / bed / vehicle) is rendered first so the player
-                    // overlays it with the correct depth ordering, matching the pre-1.21.6
-                    // call order in renderEntityPreview.
                     if (entry.beforeEntity() != null) {
                         entry.beforeEntity().render(poseStack, bufferSource, state.lightCoords);
                     }
                     CustomPlayerRenderer renderer = RendererManager.getPlayerRenderer();
-                    // Use the live frame partialTick so processAnimation interpolates
-                    // walkAnimation / modelData.lerpedAge per frame instead of snapping
-                    // to tick boundaries.
                     float framePartialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
                     renderer.renderEntity(entry.animatable(), playerState, 0.0f, framePartialTick, poseStack, bufferSource, state.lightCoords);
                     if (entry.afterEntity() != null) {
                         entry.afterEntity().render(poseStack, bufferSource, state.lightCoords);
                     }
-                    // bufferSource.endBatch();
                 } finally {
                     RenderContext.exit();
                 }

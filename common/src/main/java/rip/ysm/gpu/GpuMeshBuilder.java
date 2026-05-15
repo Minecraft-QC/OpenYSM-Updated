@@ -35,7 +35,6 @@ public final class GpuMeshBuilder {
 
         int vao = GL30.glGenVertexArrays();
         int vbo = GlStateManager._glGenBuffers();
-        // USAGE_INDEX so RenderPass.setIndexBuffer accepts it; USAGE_COPY_DST allows the initial upload.
         GpuBuffer ibo = RenderSystem.getDevice().createBuffer(() -> "ysm-mesh-ibo", GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST, ibuf);
         int ssbo = GlStateManager._glGenBuffers();
 

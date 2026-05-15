@@ -27,9 +27,6 @@ public abstract class PlayerRendererMixin extends LivingEntityRenderer<AbstractC
 
     @Override
     public void submit(AvatarRenderState livingEntityRenderState, PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector submitNodeCollector, net.minecraft.client.renderer.state.CameraRenderState cameraRenderState) {
-        // Recover the entity that produced this render state. EntityRenderStateBindings is
-        // populated at the universal sink EntityRenderer.createRenderState(Entity, float),
-        // so it covers both world rendering AND GUI/PIP previews (inventory, model picker).
         Entity entity = EntityRenderStateBindings.get(livingEntityRenderState);
         if (entity instanceof Player player) {
             if (ReplacePlayerRenderEvent.onRenderPlayerPre(player, livingEntityRenderState, Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true), poseStack, submitNodeCollector, cameraRenderState)) {

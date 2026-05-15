@@ -9,13 +9,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/**
- * Records the {@link EntityRenderState} ↔ {@link Entity} mapping at the universal sink
- * {@link EntityRenderer#createRenderState(Entity, float)} so the mod's submit-time hooks
- * can recover the original entity. See {@link EntityRenderStateBindings} for the rationale
- * (the two distinct caller paths — world rendering and GUI/PIP previews — both funnel
- * through this method).
- */
 @Mixin(EntityRenderer.class)
 public abstract class EntityRendererMixin {
 

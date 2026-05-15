@@ -531,10 +531,6 @@ public class ClientModelManager {
         }
 
         modelPackMap = new Object2ReferenceOpenHashMap<>();
-        // Clear local model context and re-prime the builtin load. If we leave
-        // localModelContext non-null, getLocalModelContext() returns the stale
-        // assembly on rejoin without going through the load pipeline, which leaves
-        // the cap's animation processor with no bone snapshots → animations frozen.
         localModelContext = null;
         defaultTexture = null;
         pendingModelCallback = null;

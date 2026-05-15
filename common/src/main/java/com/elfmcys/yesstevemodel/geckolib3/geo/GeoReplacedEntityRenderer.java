@@ -90,11 +90,6 @@ public abstract class GeoReplacedEntityRenderer<TEntity extends Player, T extend
         }
         TEntity entity = t.getEntity();
 
-        // AnimatableEntity#processAnimationImpl reads yBodyRot/yHeadRot/xRot directly
-        // off the entity, not off the captured AvatarRenderState. In PIP/preview flows
-        // the state was extracted with the intended (preview / mouse-follow) rotation
-        // but the entity was already restored to its real values before the deferred
-        // render fired. Without this sync the doll yaw tracks the world player.
         float savedYBodyRot = 0.0f, savedYBodyRotO = 0.0f;
         float savedYHeadRot = 0.0f, savedYHeadRotO = 0.0f;
         float savedYRot = 0.0f, savedYRotO = 0.0f;
@@ -177,13 +172,6 @@ public abstract class GeoReplacedEntityRenderer<TEntity extends Player, T extend
         }
         net.minecraft.client.renderer.SubmitNodeCollector activeCollector = com.elfmcys.yesstevemodel.client.renderer.RenderContext.collector();
         net.minecraft.client.renderer.state.CameraRenderState activeCameraState = com.elfmcys.yesstevemodel.client.renderer.RenderContext.camera();
-        // Vanilla's submit path passes through AvatarRenderer.submitNameTag which checks
-        // state.nameTag AND state.scoreText. We tunnel through EntityRenderer.submitNameTag
-        // via the mixin (super dispatch in LivingRendererMixin), so we lose the score path,
-        // and — more importantly — the own-player gate that vanilla applies in extract
-        // (LivingEntityRenderer.shouldShowName: entity != cameraEntity) can race with PIP
-        // / preview extracts that re-set state.nameTag. Re-apply the camera-entity gate
-        // here so third-person view of the own player doesn't show its own tag.
         if (activeCollector != null && activeCameraState != null
                 && entity != null && entity != minecraft.getCameraEntity()) {
             ((LivingEntityRendererAccessor) this).tlm$renderNameTag(state, poseStack, activeCollector, activeCameraState);

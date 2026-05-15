@@ -137,9 +137,6 @@ public final class ModelPreviewRenderer {
         livingEntity.yHeadRot = -yaw;
         livingEntity.yHeadRotO = -yaw;
 
-        // 1.21.9: overrideCameraOrientation/setRenderShadow removed from EntityRenderDispatcher.
-        // Apply the camera rotation manually onto the PoseStack and rely on the submit-pipeline
-        // (PIP-aware submit path) to handle shadow suppression via state.shadowRadius/state.shadowPieces.
         EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         rotationX.conjugate();
         poseStack.mulPose(rotationX);
@@ -177,14 +174,11 @@ public final class ModelPreviewRenderer {
             if (renderGround) {
                 renderGroundPreview(scale, pitch, yaw, bufferSource);
             }
-            // bufferSource.endBatch();
             renderer.renderEntity((LivingAnimatable) animatableEntity, state, 0.0f, partialTick, poseStack, bufferSource, 15728880);
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         }
 
-        // bufferSource.endBatch();
-        // 1.21.9: setRenderShadow(true) no longer exists — shadow state is per-renderState now.
         livingEntity.yBodyRot = oldBodyRot;
         livingEntity.yBodyRotO = oldBodyRotO;
         livingEntity.setYRot(oldYRot);
@@ -196,7 +190,6 @@ public final class ModelPreviewRenderer {
         livingEntity.setPose(oldPose);
 
         modelViewStack.popMatrix();
-        // TODO 1.21.6+ port: Lighting reset no longer needed in deferred GUI flow.
         setPreviewMode(false);
     }
 
@@ -254,9 +247,6 @@ public final class ModelPreviewRenderer {
     private static void renderVehicleEntity(float yaw, Entity riderEntity, PoseStack poseStack, EntityRenderDispatcher entityRenderDispatcher, MultiBufferSource.BufferSource bufferSource, Entity vehicleEntity, float partialTick) {
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
-        // 1.21.9: EntityRenderDispatcher.render(Entity,...) was replaced by submit(state, cameraState,...);
-        // legacy preview vehicle rendering is now driven by the PIP-aware submit pipeline (see
-        // GuiEntityRendererMixin) — this immediate-mode path is intentionally a no-op.
         poseStack.popPose();
     }
 
@@ -316,8 +306,6 @@ public final class ModelPreviewRenderer {
             livingEntity.yHeadRotO = vehicleYaw;
         }
 
-        // 1.21.9: overrideCameraOrientation/setRenderShadow are gone — apply camera rotation onto
-        // the PoseStack manually; shadow toggling now happens via state.shadowRadius in the submit pipeline.
         EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         rotationX.conjugate();
         poseStack.mulPose(rotationX);
@@ -325,7 +313,6 @@ public final class ModelPreviewRenderer {
 
         renderer.renderEntity(animatable, state, 0.0f, partialTick, poseStack, bufferSource, 15728880);
 
-        // bufferSource.endBatch();
         livingEntity.yBodyRot = oldBodyRot;
         livingEntity.yBodyRotO = oldBodyRotO;
         livingEntity.setYRot(oldYRot);
@@ -345,7 +332,6 @@ public final class ModelPreviewRenderer {
         }
 
         modelViewStack.popMatrix();
-        // TODO 1.21.6+ port: Lighting reset no longer needed in deferred GUI flow.
         setPreviewMode(false);
     }
 
@@ -358,8 +344,6 @@ public final class ModelPreviewRenderer {
         modelViewStack.translate((float) (x + (scale * 0.5d)), (float) (y + (scale * 2.0f)), 0.0f);
         modelViewStack.scale(1.0f, 1.0f, -1.0f);
 
-        // 1.21.6+: GuiGraphics#pose() is a Matrix3x2fStack (2D only). Use a dedicated PoseStack
-        // for the 3D entity render and let modelViewStack carry the screen-space placement.
         PoseStack poseStack = new PoseStack();
         poseStack.translate(0.0f, 0.0f, -zDepth);
         poseStack.scale(scale, scale, scale);
@@ -369,32 +353,14 @@ public final class ModelPreviewRenderer {
         rotationZ.mul(rotationY);
         poseStack.mulPose(rotationZ);
 
-        // 1.21.9: overrideCameraOrientation/setRenderShadow/render(Entity,...) all removed from
-        // EntityRenderDispatcher. The overlay paper-doll path was already known-corrupt under the
-        // 1.21.8 deferred GUI pipeline (see header comment further down); the PIP-aware submit
-        // helpers below replace it. This immediate-mode path is left as a no-op to preserve callers.
         EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
         rotationY.conjugate();
         poseStack.mulPose(rotationY);
         MultiBufferSource.BufferSource bufferSource = Minecraft.getInstance().renderBuffers().bufferSource();
-        // bufferSource.endBatch();
 
         modelViewStack.popMatrix();
         setExtraPlayerMode(false);
     }
-
-    // ------------------------------------------------------------------
-    // 1.21.8 PIP-aware submit API
-    //
-    // 1.21.4-era helpers above modify RenderSystem.getModelViewStack and
-    // call bufferSource.endBatch() during the Screen.render phase. In 1.21.8
-    // GUI rendering is deferred (GuiRenderState/GuiRenderer/PIP), so those
-    // immediate-mode calls land with the wrong projection / corrupt later
-    // deferred draws. The submitX methods below build a AvatarRenderState,
-    // record an animatable in PreviewEntityRegistry so GuiEntityRendererMixin
-    // can dispatch to CustomPlayerRenderer.renderEntity directly, and rely
-    // on the PIP renderer for FBO/projection/lighting setup.
-    // ------------------------------------------------------------------
 
     public static void submitLivingEntityPreview(
             GuiGraphics guiGraphics,
@@ -423,14 +389,8 @@ public final class ModelPreviewRenderer {
         CustomPlayerRenderer renderer = RendererManager.getPlayerRenderer();
         AvatarRenderState state = new AvatarRenderState();
         renderer.extractRenderState((Player) entity, state, partialTick);
-        // Force full-bright lightmap (mirrors InventoryScreen.renderEntityInInventoryFollowsMouse).
-        // extractRenderState writes state.lightCoords from the entity's world position, so a
-        // player standing in a dark cave / at night would render the GUI preview almost black.
         state.lightCoords = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
 
-        // Override the captured rotation. GeoReplacedEntityRenderer#renderEntityWithTexture
-        // re-syncs the entity's yaw to these state fields around processAnimation, so
-        // the doll's yaw is decoupled from whatever the underlying entity is doing.
         float previewYaw = disablePreviewRotation ? 180.0F : 200.0F;
         state.bodyRot = previewYaw;
         state.yRot = 0.0F;
@@ -446,10 +406,6 @@ public final class ModelPreviewRenderer {
         }
 
         float entityScale = entity.getScale();
-        // Match the pre-1.21.6 behaviour: when rotation is disabled the old
-        // renderLivingEntityPreview did a `poseStack.translate(0, 5.5, 0)` AFTER scaling,
-        // i.e. a 5.5-screen-pixel downward shift. Convert that to model-space units so
-        // it stacks onto our PIP translation correctly at any displaySize / entityScale.
         float yOffsetPx = disablePreviewRotation ? 5.5F : 0.0F;
         float yOffsetModel = yOffsetPx * entityScale / (float) displaySize;
         Vector3f translation = new Vector3f(0.0F, entity.getBbHeight() / 2.0F + yOffsetModel, 0.0F);
@@ -482,14 +438,6 @@ public final class ModelPreviewRenderer {
         }
         cap.tickModel();
 
-        // Vanilla's PIP path uses this rect as both the off-screen texture size
-        // and the on-screen blit destination. GuiEntityRenderer overrides
-        // getTranslateY to return j/2, so the entity is anchored at the rect's
-        // CENTER (not bottom). The original 1.2*scale x 2.0*scale rect clipped
-        // any model extending past a default Steve silhouette (long weapons,
-        // oversized cosmetics, raised arms). Grow the rect symmetrically around
-        // its original center so visible placement is unchanged but the
-        // texture has room to draw the full model.
         float cx = (float) (x + scale * 0.6F);
         float cy = (float) (y + scale * 1.0F);
         int halfW = (int) (scale * 2.0F);
@@ -505,16 +453,7 @@ public final class ModelPreviewRenderer {
         state.lightCoords = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
         PreviewEntityRegistry.register(state, cap);
 
-        // Apply yawOffset on top of the captured natural body rotation so the
-        // doll faces a user-configurable direction without mutating the actual
-        // player entity. state.yRot is the *net* head yaw (head - body), so
-        // leave it alone to preserve natural head turning when the player looks
-        // around. GeoReplacedEntityRenderer#renderEntityWithTexture syncs the
-        // entity to these values at render time so processAnimation sees them.
-//        state.bodyRot = state.bodyRot + yawOffset;
         state.bodyRot = 180.0F;
-//        state.yRot = 0.0F;
-//        state.xRot = 0.0F;
 
         Quaternionf rotation = new Quaternionf().rotateZ((float) Math.PI);
         float entityScale = localPlayer.getScale();
@@ -524,20 +463,6 @@ public final class ModelPreviewRenderer {
         guiGraphics.submitEntityRenderState(state, submitScale, translation, rotation, null, x0, y0, x1, y1);
     }
 
-    /**
-     * Animation test preview (PlayerTextureScreen). Renders a player model with
-     * user-controlled yaw / pitch / zoom / offset inside the supplied scissor rect.
-     * Replaces the pre-1.21.6 {@link #renderEntityPreview} which relied on
-     * {@code RenderSystem.getModelViewStack} + {@code bufferSource.endBatch} and
-     * cannot work under 1.21.8's deferred GUI pipeline.
-     *
-     * @param x0,y0,x1,y1 PIP rect (also used as scissor)
-     * @param anchorX,anchorY screen-pixel position the model anchor maps to
-     *                        (before the OLD-compatible +0.8 base offset)
-     * @param zoom model display scale (pixels per model unit at entityScale=1)
-     * @param pitch user X tilt in degrees (added on top of -10° base)
-     * @param yaw user Y body yaw in degrees
-     */
     public static void submitTexturePreview(
             GuiGraphics guiGraphics,
             int x0, int y0, int x1, int y1,
@@ -554,10 +479,6 @@ public final class ModelPreviewRenderer {
             return;
         }
 
-        // Animation-driven pose overrides matching the pre-1.21.6 renderEntityPreview.
-        // For sleep / swim / sneak we set Pose so HumanoidModel#setupAnim picks up
-        // the right limb layout; for sit / ride / ride_pig / boat we apply a small
-        // Y offset (in model units) that the old code added via poseStack.translate.
         AnimationTracker tracker = animatable.getAnimationStateMachine();
         Pose oldPose = entity.getPose();
         Pose newPose = oldPose;
@@ -587,16 +508,10 @@ public final class ModelPreviewRenderer {
         renderer.extractRenderState((Player) entity, state, partialTick);
         state.lightCoords = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
 
-        // Old: yBodyRot = -yaw, yHeadRot = -yaw, yRot = 180 -> state.bodyRot=-yaw,
-        // state.yRot=180+yaw (net head). We replicate that so the body rotates with
-        // the user-controlled yaw and the head stays aligned with the body.
         state.bodyRot = -yaw;
         state.yRot = Mth.wrapDegrees(180.0F + yaw);
         state.xRot = 0.0F;
 
-        // Scenery (ground / bed / vehicle). These piggy-back on the PIP PoseStack and
-        // BufferSource via PreviewEntityRegistry, so they end up in the same off-screen
-        // texture as the player with correct depth ordering.
         final float capturedYaw = yaw;
         final boolean wantGround = renderGround;
         final boolean wantBed = tracker.isCurrentAnimation("sleep");
@@ -635,12 +550,8 @@ public final class ModelPreviewRenderer {
         float submitScale = zoom / entityScale;
         float rectCenterX = (x0 + x1) / 2.0F;
         float rectCenterY = (y0 + y1) / 2.0F;
-        // (anchorX,anchorY) is the OLD-style screen anchor; translate(0,0.8,0)
-        // in OLD pose-space is the constant base offset that puts the model
-        // slightly below the anchor.
         float translationX = (anchorX - rectCenterX) / submitScale;
         float translationY = (anchorY - rectCenterY) / submitScale + 0.8F + poseYOffset;
-
         if (wantBed) {
             state.bodyRot = yaw - 90;
         }
@@ -709,9 +620,6 @@ public final class ModelPreviewRenderer {
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
         double yOffset = -(vehicle.getPassengerRidingPosition(rider).y - vehicle.getY());
-        // 1.21.9: dispatcher.render(Entity,...) replaced by submit(state, cameraState,...).
-        // Preview vehicle rendering for PIP is handled by the submit-pipeline path; this
-        // immediate-mode helper is intentionally a no-op until the preview migration completes.
         poseStack.popPose();
     }
 }

@@ -12,9 +12,6 @@ import org.joml.Matrix3x2f;
 import org.joml.Matrix3x2fc;
 import org.joml.Vector2f;
 
-// Untextured 4-vertex quad for the AnimationRouletteScreen radial slices.
-// Restores the pre-1.21.6 trapezoid look that ColoredRectangleRenderState can't produce
-// (a 2D affine on a rectangle yields a parallelogram, not a true pie-slice trapezoid).
 public record RadialSliceRenderState(
         Matrix3x2fc pose,
         float x0, float y0,
