@@ -62,7 +62,13 @@ public class ReplacePlayerRenderEvent {
                                 ? net.minecraft.client.renderer.LightTexture.FULL_BRIGHT
                                 : renderState.lightCoords;
                         RendererManager.getPlayerRenderer().render(entity, renderState, entity.getYRot(), ModelPreviewRenderer.isPreview() ? 1.0f : partialTick, poseStack, bufferSource, packedLight);
-                        // bufferSource.endBatch();
+                        // 必须在 entity 阶段就 flush：body + 各 layer（鞘翅/盔甲/坐骑鹦鹉等）通过
+                        // VertexConsumer 写进 bufferSource，如果不在这里 endBatch，会留到
+                        // GameRenderer.renderItemInHand 开头的 vanilla flush 才刷出去——那时 Iris 的
+                        // frame phase 已经离开 "entities"，shader 用错相位 → 幽灵在天上飘
+                        // （之前 body 看似被 hand mixin 的 endBatch 误修好，其实是被 gbuffers_hand
+                        // 当成相机附近几何处理而看不见，但 elytra 偏出来一段就露馅了）。
+                        bufferSource.endBatch();
                     } finally {
                         RenderContext.exit();
                     }

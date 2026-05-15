@@ -1,11 +1,10 @@
 package rip.ysm.gpu;
 
 import com.elfmcys.yesstevemodel.geckolib3.geo.render.built.GeoModel;
+import com.elfmcys.yesstevemodel.mixin.client.GlBufferAccessor;
+import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.opengl.GlStateManager;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL20;
-import org.lwjgl.opengl.GL30;
+import com.mojang.blaze3d.systems.RenderSystem;
 import org.lwjgl.opengl.GL45;
 import org.lwjgl.system.MemoryUtil;
 
@@ -15,7 +14,7 @@ public final class GpuMesh {
     public final long pointer;
     public final int vao;
     public final int vbo;
-    public final int ibo;
+    public final GpuBuffer ibo;
     public final int boneSsbo;
     public final int vertexCount;
     public final int indexCount;
@@ -25,11 +24,10 @@ public final class GpuMesh {
     public final int partMask3Start, partMask3Count;
     public final ByteBuffer perFrameBoneBuffer;
 
-    private int xformVbo = 0;
-    private int xformVao = 0;
+    private GpuBuffer xformVbo;
     private boolean disposed = false;
 
-    GpuMesh(long pointer, int vao, int vbo, int ibo, int boneSsbo, int vertexCount, int indexCount, int boneCount, int pm1s, int pm1c, int pm2s, int pm2c, int pm3s, int pm3c) {
+    GpuMesh(long pointer, int vao, int vbo, GpuBuffer ibo, int boneSsbo, int vertexCount, int indexCount, int boneCount, int pm1s, int pm1c, int pm2s, int pm2c, int pm3s, int pm3c) {
         this.pointer = pointer;
         this.vao = vao;
         this.vbo = vbo;
@@ -54,6 +52,13 @@ public final class GpuMesh {
         return 0;
     }
 
+    public int indexFirstIndex(int renderPartMask) {
+        if (renderPartMask == 0 || renderPartMask == 3) return 0;
+        if (renderPartMask == 1) return partMask1Start;
+        if (renderPartMask == 2) return partMask2Start;
+        return 0;
+    }
+
     public int indexDrawCount(int renderPartMask) {
         if (renderPartMask == 0) return indexCount;
         if (renderPartMask == 3) return indexCount;
@@ -61,49 +66,33 @@ public final class GpuMesh {
         return self + partMask3Count;
     }
 
-    public int xformVbo() {
+    public int iboHandle() {
+        return ((GlBufferAccessor) (Object) ibo).ysm$getHandle();
+    }
+
+    public GpuBuffer xformVbo() {
         return xformVbo;
     }
 
-    public int xformVao() {
-        return xformVao;
+    public int xformVboHandle() {
+        return xformVbo == null ? 0 : ((GlBufferAccessor) (Object) xformVbo).ysm$getHandle();
     }
 
     public void ensureXformBuffers() {
-        if (xformVao != 0) return;
-        xformVbo = GlStateManager._glGenBuffers();
-        GlStateManager._glBindBuffer(GL15.GL_ARRAY_BUFFER, xformVbo);
-        GL45.glBufferData(GL15.GL_ARRAY_BUFFER, (long) vertexCount * 36, GL15.GL_DYNAMIC_DRAW);
-        xformVao = GL45.glGenVertexArrays();
-        GL45.glBindVertexArray(xformVao);
-        GlStateManager._glBindBuffer(GL15.GL_ARRAY_BUFFER, xformVbo);
-        GlStateManager._glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, ibo);
-        GL20.glEnableVertexAttribArray(0);
-        GL20.glVertexAttribPointer(0, 3, GL15.GL_FLOAT, false, 36, 0L);
-        GL20.glEnableVertexAttribArray(1);
-        GL20.glVertexAttribPointer(1, 4, GL11.GL_UNSIGNED_BYTE, true, 36, 12L);
-        GL20.glEnableVertexAttribArray(2);
-        GL20.glVertexAttribPointer(2, 2, GL15.GL_FLOAT, false, 36, 16L);
-        GL20.glEnableVertexAttribArray(3);
-        GL30.glVertexAttribIPointer(3, 2, GL11.GL_SHORT, 36, 24L);
-        GL20.glEnableVertexAttribArray(4);
-        GL30.glVertexAttribIPointer(4, 2, GL11.GL_SHORT, 36, 28L);
-        GL20.glEnableVertexAttribArray(5);
-        GL20.glVertexAttribPointer(5, 3, GL11.GL_BYTE, true, 36, 32L);
-        GL45.glBindVertexArray(0);
-        GlStateManager._glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
-        GlStateManager._glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, 0);
+        if (xformVbo != null) return;
+        // USAGE_VERTEX so RenderPass.setVertexBuffer accepts it; USAGE_COPY_DST in case anyone writes to it via writeToBuffer.
+        // Compute shader still binds it as SSBO via the raw GL handle — that path works regardless of the usage hint.
+        xformVbo = RenderSystem.getDevice().createBuffer(() -> "ysm-xform-vbo", GpuBuffer.USAGE_VERTEX | GpuBuffer.USAGE_COPY_DST, (long) vertexCount * 36);
     }
 
     public void dispose() {
         if (disposed) return;
         disposed = true;
         GlStateManager._glDeleteBuffers(vbo);
-        GlStateManager._glDeleteBuffers(ibo);
+        ibo.close();
         GlStateManager._glDeleteBuffers(boneSsbo);
         GL45.glDeleteVertexArrays(vao);
-        if (xformVbo != 0) GlStateManager._glDeleteBuffers(xformVbo);
-        if (xformVao != 0) GL45.glDeleteVertexArrays(xformVao);
+        if (xformVbo != null) xformVbo.close();
         if (pointer != 0) {
             GeoModel.nFreeGpuMesh(pointer);
         }

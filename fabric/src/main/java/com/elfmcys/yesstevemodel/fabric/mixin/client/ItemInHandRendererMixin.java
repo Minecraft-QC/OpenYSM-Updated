@@ -52,7 +52,12 @@ public abstract class ItemInHandRendererMixin {
         try {
             boolean cancelled = ReplacePlayerHandRenderEvent.onRenderArm(minecraft.player, humanoidArm, poseStack, bufferSource, packedLight);
             if (cancelled) {
-                // bufferSource.endBatch();
+                // 必须在 hand 阶段就 flush：否则手臂顶点（已被 renderItemInHand 的 eye→world
+                // 旋转烤进 PoseStack）会留在 buffer 里，被后面 level 阶段触发的 endBatch 一起绘制——
+                // 那时 modelView 是 world→eye，相当于把"已含相机旋转的顶点"再乘一次相机旋转，
+                // 结果是：第一人称手不跟视角；第三人称看向哪边天空里就有个幽灵手臂。
+                // 装了 Iris 时尤其明显，因为 Iris 的 frame-phase 着色器分发也依赖在正确阶段 flush。
+                bufferSource.endBatch();
             }
             return cancelled;
         } finally {

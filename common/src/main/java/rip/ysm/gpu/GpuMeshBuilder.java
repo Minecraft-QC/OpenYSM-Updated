@@ -1,6 +1,8 @@
 package rip.ysm.gpu;
 
 import com.elfmcys.yesstevemodel.geckolib3.geo.render.built.GeoModel;
+import com.elfmcys.yesstevemodel.mixin.client.GlBufferAccessor;
+import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import org.lwjgl.opengl.*;
@@ -33,14 +35,16 @@ public final class GpuMeshBuilder {
 
         int vao = GL30.glGenVertexArrays();
         int vbo = GlStateManager._glGenBuffers();
-        int ibo = GlStateManager._glGenBuffers();
+        // USAGE_INDEX so RenderPass.setIndexBuffer accepts it; USAGE_COPY_DST allows the initial upload.
+        GpuBuffer ibo = RenderSystem.getDevice().createBuffer(() -> "ysm-mesh-ibo", GpuBuffer.USAGE_INDEX | GpuBuffer.USAGE_COPY_DST, ibuf);
         int ssbo = GlStateManager._glGenBuffers();
+
+        int iboHandle = ((GlBufferAccessor) (Object) ibo).ysm$getHandle();
 
         GL30.glBindVertexArray(vao);
         GlStateManager._glBindBuffer(GL15.GL_ARRAY_BUFFER, vbo);
         GL15.glBufferData(GL15.GL_ARRAY_BUFFER, vbuf, GL15.GL_STATIC_DRAW);
-        GlStateManager._glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, ibo);
-        GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, ibuf, GL15.GL_STATIC_DRAW);
+        GlStateManager._glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, iboHandle);
 
         GL20.glEnableVertexAttribArray(0);
         GL20.glVertexAttribPointer(0, 3, GL15.GL_FLOAT, false, 32, 0L);
