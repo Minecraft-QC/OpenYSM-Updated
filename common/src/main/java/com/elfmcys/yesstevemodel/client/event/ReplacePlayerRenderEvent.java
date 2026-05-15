@@ -16,6 +16,7 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.world.entity.player.Player;
 import rip.ysm.compat.firstperson.FirstPersonCompat;
+import rip.ysm.compat.oculus.OculusCompat;
 import rip.ysm.compat.playeranimator.PlayerAnimatorCompat;
 import rip.ysm.compat.realcamera.RealCameraCompat;
 
@@ -65,10 +66,16 @@ public class ReplacePlayerRenderEvent {
                         // 必须在 entity 阶段就 flush：body + 各 layer（鞘翅/盔甲/坐骑鹦鹉等）通过
                         // VertexConsumer 写进 bufferSource，如果不在这里 endBatch，会留到
                         // GameRenderer.renderItemInHand 开头的 vanilla flush 才刷出去——那时 Iris 的
-                        // frame phase 已经离开 "entities"，shader 用错相位 → 幽灵在天上飘
-                        // （之前 body 看似被 hand mixin 的 endBatch 误修好，其实是被 gbuffers_hand
-                        // 当成相机附近几何处理而看不见，但 elytra 偏出来一段就露馅了）。
-                        bufferSource.endBatch();
+                        // frame phase 已经离开 "entities"，shader 用错相位 → 幽灵在天上飘。
+                        //
+                        // 但 shadow pass 里别 flush——某些 shader pack（如 iterationT）的 shadow
+                        // 实现会因为我们这里的额外 flush 在特定相机/世界坐标下把 shadow map 上的
+                        // 玩家几何 cull 掉，表现为地上影子按坐标周期性闪失。shadow pass 不 flush 的话
+                        // 顶点会留在 buffer 里，等 Iris 自己的 shadow flow 在合适时机 flush，跟
+                        // vanilla submit 实体走的是同一条 hook 路径。
+                        if (OculusCompat.isRenderingShadowPass()) {
+                            bufferSource.endBatch();
+                        }
                     } finally {
                         RenderContext.exit();
                     }
