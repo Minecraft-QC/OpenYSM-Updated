@@ -1,5 +1,6 @@
 package com.elfmcys.yesstevemodel.fabric.client;
 
+import com.elfmcys.yesstevemodel.client.ClientModelManager;
 import com.elfmcys.yesstevemodel.client.renderer.AnimationDebugOverlay;
 import com.elfmcys.yesstevemodel.client.renderer.LoadingStateOverlay;
 import com.elfmcys.yesstevemodel.client.renderer.ModelSyncStateOverlay;
@@ -23,5 +24,7 @@ public final class YesSteveModelFabricClient implements ClientModInitializer {
             loadingOverlay.render(guiGraphics, mc.font, partial, w, h);
             syncOverlay.render(guiGraphics, mc.font, partial, w, h);
         });
+
+        ClientModelManager.loadDefaultModel();
     }
 }

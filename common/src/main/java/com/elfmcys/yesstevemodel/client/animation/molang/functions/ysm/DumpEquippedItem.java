@@ -23,7 +23,7 @@ public class DumpEquippedItem extends LivingEntityFunction {
     public Object eval(ExecutionContext<IContext<LivingEntity>> context, ArgumentCollection arguments) {
         EquipmentSlot slot;
         Identifier key;
-        if (!context.entity().isDebugMode() || (slot = MolangUtils.parseSlotType(context.entity(), arguments.getAsString(context, 0))) == null) {
+        if (!context.entity().isDebugMode() || (slot = MolangUtils.parseSlotType(context, arguments, 0)) == null) {
             return null;
         }
         ItemStack stack = CosmeticArmorHelper.getArmorItem(context.entity().entity(), slot);
