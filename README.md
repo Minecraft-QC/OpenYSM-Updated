@@ -1,3 +1,7 @@
+上游项目已迁移至 https://github.com/OpenYSMDev/OpenYSM
+
+---
+
 <div align="center">
   <img src="images/banner2.png" alt="logo"/>
   <h1>OpenYSM-Updated</h1>
