@@ -1,8 +1,8 @@
 package rip.ysm.gpu;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferUploader;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
@@ -83,14 +83,17 @@ public final class BlurStack {
         frameCounter++;
         BlurShader.captureScreen(frameCounter);
 
-        RenderSystem.getProjectionMatrix().mul(RenderSystem.getModelViewMatrix(), mvpScratch);
-        mvpScratch.mul(graphics.pose().last().pose());
+        int sw = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int sh = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        mvpScratch.identity().ortho(0.0f, sw, sh, 0.0f, 1000.0f, 21000.0f);
+        mvpScratch.mul(RenderSystem.getModelViewMatrix());
+        mvpScratch.mul(graphics.pose());
         mvpScratch.get(mvpFloats);
 
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableCull();
-        RenderSystem.disableDepthTest();
+        GlStateManager._enableBlend();
+        GlStateManager._blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager._disableCull();
+        GlStateManager._disableDepthTest();
 
         GlStateManager._activeTexture(GL13.GL_TEXTURE0);
         GlStateManager._bindTexture(BlurShader.captureTextureId());
@@ -131,9 +134,8 @@ public final class BlurStack {
         }
 
         GlStateManager._glUseProgram(0);
-        BufferUploader.invalidate();
         GlStateManager._glBindVertexArray(0);
-        RenderSystem.disableBlend();
+        GlStateManager._disableBlend();
 
         regions.clear();
     }

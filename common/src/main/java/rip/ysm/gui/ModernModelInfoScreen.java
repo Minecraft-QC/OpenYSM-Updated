@@ -11,10 +11,12 @@ import com.elfmcys.yesstevemodel.resource.models.AuthorInfo;
 import com.elfmcys.yesstevemodel.resource.models.Metadata;
 import com.elfmcys.yesstevemodel.util.data.OrderedStringMap;
 import com.elfmcys.yesstevemodel.util.data.StringPair;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.network.chat.Component;
+
+import java.net.URI;
 import org.apache.commons.lang3.StringUtils;
 import rip.ysm.gui.components.*;
 import rip.ysm.gui.components.buttons.FooterButton;
@@ -139,7 +141,12 @@ public class ModernModelInfoScreen extends OptionScreen {
     public void openUrlWithConfirm(String url) {
         if (StringUtils.isBlank(url)) return;
         Minecraft.getInstance().setScreen(new ConfirmLinkScreen(confirmed -> {
-            if (confirmed) Util.getPlatform().openUri(url);
+            if (confirmed) {
+                try {
+                    Util.getPlatform().openUri(new URI(url));
+                } catch (Exception ignored) {
+                }
+            }
             Minecraft.getInstance().setScreen(this);
         }, url, true));
     }

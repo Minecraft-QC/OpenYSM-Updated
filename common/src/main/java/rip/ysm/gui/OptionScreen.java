@@ -4,6 +4,7 @@ import com.elfmcys.yesstevemodel.config.GeneralConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
@@ -268,8 +269,6 @@ public abstract class OptionScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
-
         renderPanelBackdrop(g);
 
         g.fill(panelLeft, panelTop, panelRight, panelTop + 18, 0x90000000);
@@ -316,24 +315,24 @@ public abstract class OptionScreen extends Screen {
                 adjTabMouseY = inTabArea ? mouseY + Math.round(tabScrollDisplay) : Integer.MIN_VALUE;
             }
             g.enableScissor(tabAreaLeft, tabAreaTop, tabAreaRight, tabAreaBottom);
-            g.pose().pushPose();
-            if (compactTabs) g.pose().translate(-tabScrollDisplay, 0, 0);
-            else g.pose().translate(0, -tabScrollDisplay, 0);
+            g.pose().pushMatrix();
+            if (compactTabs) g.pose().translate(-tabScrollDisplay, 0);
+            else g.pose().translate(0, -tabScrollDisplay);
             for (TabButton tb : tabButtons) {
                 tb.render(g, adjTabMouseX, adjTabMouseY, partialTick);
             }
-            g.pose().popPose();
+            g.pose().popMatrix();
             g.disableScissor();
             if (maxTabScroll > 0) renderTabScrollbar(g);
         }
 
         g.enableScissor(rowAreaLeft, rowAreaTop, rowAreaRight, rowAreaBottom);
-        g.pose().pushPose();
-        g.pose().translate(0, -rowScrollDisplay, 0);
+        g.pose().pushMatrix();
+        g.pose().translate(0, -rowScrollDisplay);
         for (OptionRow<?> row : activeRows) {
             row.render(g, mouseX, adjMouseY, partialTick);
         }
-        g.pose().popPose();
+        g.pose().popMatrix();
         g.disableScissor();
         if (maxRowScroll > 0) renderRowScrollbar(g);
 
@@ -455,7 +454,10 @@ public abstract class OptionScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         for (OptionRow<?> row : activeRows) {
             if (row.isOverlayOpen() && row.overlayMouseClicked(mouseX, mouseY, button, rowScrollDisplay)) {
                 return true;
@@ -478,8 +480,9 @@ public abstract class OptionScreen extends Screen {
         if (mouseX >= tabAreaLeft && mouseX < tabAreaRight && mouseY >= tabAreaTop && mouseY < tabAreaBottom) {
             double adjX = compactTabs ? mouseX + tabScrollDisplay : mouseX;
             double adjY = compactTabs ? mouseY : mouseY + tabScrollDisplay;
+            MouseButtonEvent adjEvent = new MouseButtonEvent(adjX, adjY, event.buttonInfo());
             for (TabButton tb : tabButtons) {
-                if (tb.mouseClicked(adjX, adjY, button)) {
+                if (tb.mouseClicked(adjEvent, doubleClick)) {
                     return true;
                 }
             }
@@ -487,8 +490,9 @@ public abstract class OptionScreen extends Screen {
         }
         if (mouseX >= rowAreaLeft && mouseX < rowAreaRight && mouseY >= rowAreaTop && mouseY < rowAreaBottom) {
             double adjY = mouseY + rowScrollDisplay;
+            MouseButtonEvent adjEvent = new MouseButtonEvent(mouseX, adjY, event.buttonInfo());
             for (OptionRow<?> row : activeRows) {
-                if (row.mouseClicked(mouseX, adjY, button)) {
+                if (row.mouseClicked(adjEvent, doubleClick)) {
                     setFocused(row);
                     if (button == 0) setDragging(true);
                     return true;
@@ -496,24 +500,24 @@ public abstract class OptionScreen extends Screen {
             }
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
         if (draggingRowScrollbar) {
-            updateRowScrollFromMouse(mouseY);
+            updateRowScrollFromMouse(event.y());
             return true;
         }
         if (draggingTabScrollbar) {
-            updateTabScrollFromMouse(mouseX, mouseY);
+            updateTabScrollFromMouse(event.x(), event.y());
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        return super.mouseDragged(event, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
         if (draggingRowScrollbar) {
             draggingRowScrollbar = false;
             return true;
@@ -522,11 +526,12 @@ public abstract class OptionScreen extends Screen {
             draggingTabScrollbar = false;
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        double delta = scrollY;
         for (OptionRow<?> row : activeRows) {
             if (row.isOverlayOpen() && row.overlayMouseScrolled(mouseX, mouseY, delta, rowScrollDisplay)) {
                 return true;
@@ -540,7 +545,7 @@ public abstract class OptionScreen extends Screen {
             rowScrollOffset = Mth.clamp((int) (rowScrollOffset - delta * 20), 0, maxRowScroll);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     private boolean isOnRowScrollbar(double mouseX, double mouseY) {

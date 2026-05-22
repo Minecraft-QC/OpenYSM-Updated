@@ -80,8 +80,8 @@ public class EnumOptionRow<E extends Enum<E>> extends OptionRow<E> {
         int listH = visible * 14 + 2;
         int listX = cx;
         int listY = cy + ch;
-        g.pose().pushPose();
-        g.pose().translate(0.0f, 0.0f, 200.0f);
+        g.nextStratum();
+        g.pose().pushMatrix();
         g.fill(listX, listY, listX + cw, listY + listH, 0xFF111111);
         int first = (int) (listScroll / 14);
         first = Math.max(0, Math.min(first, Math.max(0, values.length - visible)));
@@ -105,7 +105,7 @@ public class EnumOptionRow<E extends Enum<E>> extends OptionRow<E> {
             g.fill(trackX, trackTop, trackX + 2, trackBot, 0x80444444);
             g.fill(trackX, thumbY, trackX + 2, thumbY + thumbH, 0xFFAAAAAA);
         }
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     @Override

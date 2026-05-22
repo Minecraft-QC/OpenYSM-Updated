@@ -2,9 +2,13 @@ package rip.ysm.gpu;
 
 import com.elfmcys.yesstevemodel.YesSteveModel;
 import com.elfmcys.yesstevemodel.util.log.ChatLogger;
+import com.mojang.blaze3d.opengl.GlDevice;
+import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.opengl.GlTextureView;
+import com.mojang.blaze3d.opengl.DirectStateAccess;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.opengl.*;
 
@@ -40,7 +44,7 @@ public final class BlurShader {
     public static synchronized boolean ensureCompiled() {
         if (program != 0) return true;
         if (failed) return false;
-        RenderSystem.assertOnRenderThreadOrInit();
+        RenderSystem.assertOnRenderThread();
         try {
             int vs = ShaderUtil.compileShaderFromResource(GL20.GL_VERTEX_SHADER, "/blur.vsh");
             int fs = ShaderUtil.compileShaderFromResource(GL20.GL_FRAGMENT_SHADER, "/blur.fsh");
@@ -167,16 +171,24 @@ public final class BlurShader {
         if (frameKey == lastCaptureFrame && frameKey >= 0) return;
         lastCaptureFrame = frameKey;
         RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
-        int w = main.viewWidth;
-        int h = main.viewHeight;
+        int w = main.width;
+        int h = main.height;
         ensureCaptureTexture(w, h);
 
-        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, main.frameBufferId);
+        GpuTextureView colorView = main.getColorTextureView();
+        GpuTextureView depthView = main.getDepthTextureView();
+        if (!(colorView instanceof GlTextureView glColor) || !(depthView instanceof GlTextureView glDepth)) {
+            return;
+        }
+        DirectStateAccess dsa = ((GlDevice) RenderSystem.getDevice()).directStateAccess();
+        int mainFbo = glColor.getFbo(dsa, glDepth.texture());
+
+        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainFbo);
         GlStateManager._activeTexture(GL13.GL_TEXTURE0);
         GlStateManager._bindTexture(captureTextureId);
         GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, 0, 0, w, h);
         GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
-        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, main.frameBufferId);
+        GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, mainFbo);
     }
 
     private static void ensureCaptureTexture(int w, int h) {

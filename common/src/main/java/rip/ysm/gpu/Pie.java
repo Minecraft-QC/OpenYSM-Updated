@@ -1,8 +1,8 @@
 package rip.ysm.gpu;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferUploader;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
@@ -26,8 +26,11 @@ public final class Pie {
         float rectW = (outerRadius + pad) * 2.0f;
         float rectH = (outerRadius + pad) * 2.0f;
 
-        RenderSystem.getProjectionMatrix().mul(RenderSystem.getModelViewMatrix(), mvpScratch);
-        mvpScratch.mul(graphics.pose().last().pose());
+        int sw = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        int sh = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        mvpScratch.identity().ortho(0.0f, sw, sh, 0.0f, 1000.0f, 21000.0f);
+        mvpScratch.mul(RenderSystem.getModelViewMatrix());
+        mvpScratch.mul(graphics.pose());
         mvpScratch.get(mvpFloats);
 
         float cr = ((rgba >> 16) & 0xFF) / 255.0f;
@@ -35,10 +38,10 @@ public final class Pie {
         float cb = (rgba & 0xFF) / 255.0f;
         float ca = ((rgba >> 24) & 0xFF) / 255.0f;
 
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableCull();
-        RenderSystem.disableDepthTest();
+        GlStateManager._enableBlend();
+        GlStateManager._blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager._disableCull();
+        GlStateManager._disableDepthTest();
 
         GlStateManager._glUseProgram(PieShader.program());
 
@@ -56,9 +59,8 @@ public final class Pie {
         GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, 6);
 
         GlStateManager._glUseProgram(0);
-        BufferUploader.invalidate();
         GlStateManager._glBindVertexArray(0);
 
-        RenderSystem.disableBlend();
+        GlStateManager._disableBlend();
     }
 }

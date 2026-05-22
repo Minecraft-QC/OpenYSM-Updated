@@ -6,18 +6,18 @@ import com.elfmcys.yesstevemodel.client.entity.PlayerPreviewEntity;
 import com.elfmcys.yesstevemodel.client.gui.PlayerModelScreen;
 import com.elfmcys.yesstevemodel.client.model.ModelAssembly;
 import com.elfmcys.yesstevemodel.client.renderer.ModelPreviewRenderer;
-import com.elfmcys.yesstevemodel.client.renderer.RendererManager;
 import com.elfmcys.yesstevemodel.geckolib3.core.builder.Animation;
 import com.elfmcys.yesstevemodel.geckolib3.core.molang.util.StringPool;
 import com.elfmcys.yesstevemodel.util.data.OrderedStringMap;
-import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.Object2ReferenceMap;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import rip.ysm.gui.components.AnimationRow;
 import rip.ysm.gui.components.TextureGrid;
@@ -34,7 +34,7 @@ import java.util.Map;
 
 public class ModernPlayerTextureScreen extends OptionScreen {
 
-    private static final ResourceLocation ICON_TEXTURE = new ResourceLocation(YesSteveModel.MOD_ID, "texture/icon.png");
+    private static final Identifier ICON_TEXTURE = Identifier.fromNamespaceAndPath(YesSteveModel.MOD_ID, "texture/icon.png");
     private static final List<String> CATEGORY_ORDER = List.of("_textures", "main", "extra", "arm", "fp_arm", "tac", "carryon", "parcool", "swem", "slashblade", "tlm", "immersive_melodies", "irons_spell_books", "arrow");
 
     public final ModelAssembly renderContext;
@@ -234,7 +234,7 @@ public class ModernPlayerTextureScreen extends OptionScreen {
         g.fill(btn.x, btn.y, btn.x + btn.size, btn.y + btn.size, bg);
         int ix = btn.x + (btn.size - 16) / 2;
         int iy = btn.y + (btn.size - 16) / 2;
-        g.blit(ICON_TEXTURE, ix, iy, 16, 16, btn.u, btn.v, 16, 16, 256, 256);
+        g.blit(RenderPipelines.GUI_TEXTURED, ICON_TEXTURE, ix, iy, btn.u, btn.v, 16, 16, 16, 16, 256, 256);
     }
 
     @Override
@@ -316,23 +316,19 @@ public class ModernPlayerTextureScreen extends OptionScreen {
         if (!modelHolder.getAnimationStateMachine().isCurrentAnimation(currentAnimation)) {
             modelHolder.getAnimationStateMachine().setCurrentAnimation(currentAnimation);
         }
-        double scale = this.minecraft.getWindow().getGuiScale();
-        int sx = (int) (previewLeft * scale);
-        int sy = (int) (this.minecraft.getWindow().getHeight() - previewBottom * scale);
-        int sw = (int) ((previewRight - previewLeft) * scale);
-        int sh = (int) ((previewBottom - previewTop) * scale);
-        RenderSystem.enableScissor(sx, sy, sw, sh);
         PlayerCapability.get(this.minecraft.player).ifPresent(cap -> {
             modelHolder.initModelWithTexture(modelId, cap.getCurrentTextureName());
             float cx = (previewLeft + previewRight) / 2.0f + offsetX;
             float cy = previewTop + (previewBottom - previewTop) * 0.65f + offsetY;
-            ModelPreviewRenderer.renderEntityPreview(cx, cy, zoom, pitch, yaw, this.minecraft.getFrameTime(), modelHolder, RendererManager.getPlayerRenderer(), showGround);
+            ModelPreviewRenderer.submitTexturePreview(g, previewLeft, previewTop, previewRight, previewBottom, cx, cy, zoom, pitch, yaw, modelHolder, showGround, partialTick);
         });
-        RenderSystem.disableScissor();
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (button == 0) {
             for (IconButton btn : icons) {
                 if (btn.contains(mouseX, mouseY)) {
@@ -346,21 +342,22 @@ public class ModernPlayerTextureScreen extends OptionScreen {
             draggingButton = button;
             return true;
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (draggingPreview && button == draggingButton) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (draggingPreview && event.button() == draggingButton) {
             draggingPreview = false;
             draggingButton = -1;
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        int button = event.button();
         if (draggingPreview && button == draggingButton) {
             if (button == 0) {
                 yaw = (float) (yaw + dragX * 1.2);
@@ -371,16 +368,17 @@ public class ModernPlayerTextureScreen extends OptionScreen {
             }
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        double delta = scrollY;
         if (isInPreview(mouseX, mouseY)) {
             zoom = Mth.clamp((float) (zoom * (1.0 + delta * 0.1)), 18.0f, 360.0f);
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     private boolean isInPreview(double mouseX, double mouseY) {

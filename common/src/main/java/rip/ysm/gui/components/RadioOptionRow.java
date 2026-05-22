@@ -2,6 +2,7 @@ package rip.ysm.gui.components;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import rip.ysm.gui.Option;
@@ -48,8 +49,8 @@ public class RadioOptionRow extends OptionRow<Integer> {
     }
 
     @Override
-    public void onClick(double mouseX, double mouseY) {
-        if (!isMouseOverControl(mouseX, mouseY)) return;
+    public void onClick(MouseButtonEvent event, boolean doubleClick) {
+        if (!isMouseOverControl(event.x(), event.y())) return;
         open = !open;
         if (open) {
             int cur = currentIndex();
@@ -81,8 +82,8 @@ public class RadioOptionRow extends OptionRow<Integer> {
         int listH = visible * 14 + 2;
         int listX = cx;
         int listY = cy + ch;
-        g.pose().pushPose();
-        g.pose().translate(0.0f, 0.0f, 200.0f);
+        g.nextStratum();
+        g.pose().pushMatrix();
         g.fill(listX, listY, listX + cw, listY + listH, 0xFF111111);
         int first = (int) (listScroll / 14);
         first = Math.max(0, Math.min(first, Math.max(0, labels.size() - visible)));
@@ -106,7 +107,7 @@ public class RadioOptionRow extends OptionRow<Integer> {
             g.fill(trackX, trackTop, trackX + 2, trackBot, 0x80444444);
             g.fill(trackX, thumbY, trackX + 2, thumbY + thumbH, 0xFFAAAAAA);
         }
-        g.pose().popPose();
+        g.pose().popMatrix();
     }
 
     @Override
