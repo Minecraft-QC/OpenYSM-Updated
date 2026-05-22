@@ -20,6 +20,7 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -242,5 +243,6 @@ public abstract class GeoReplacedEntityRenderer<TEntity extends Player, T extend
     @Override
     public void extractRenderState(TEntity entity, S state, float partialTick) {
         super.extractRenderState(entity, state, partialTick);
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, state, partialTick, this.itemModelResolver);
     }
 }
