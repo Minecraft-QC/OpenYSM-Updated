@@ -60,11 +60,12 @@ subprojects {
             name = "Ladysnake"
             url = "https://maven.ladysnake.org/releases"
         }
-    }
-            maven {
+   
+     maven {
             name = "Fuzs Mod Resources"
             url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
         }
+            }
 
     dependencies {
         minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
