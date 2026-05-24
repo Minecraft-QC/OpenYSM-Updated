@@ -16,7 +16,7 @@ dependencies {
 
     // Forge Config API Port — 让 common 在编译期看到 net.minecraftforge.common.ForgeConfigSpec 等类。
     // 运行时由 fabric 子项目通过 modImplementation 引入 port。
-    modCompileOnly fuzs.forgeconfigapiport:forgeconfigapiport-c:ommon$rootProject.forge_config_api_port_version"
+   modCompileOnly "fuzs.forgeconfigapiport:forgeconfigapiport-common:$rootProject.forge_config_api_port_version"
 
     // Cardinal Components — common 需要在编译期看到 ComponentKey/EntityComponentInitializer 等接口。
     modCompileOnly "org.ladysnake.cardinal-components-api:cardinal-components-base:$rootProject.cardinal_components_version"
