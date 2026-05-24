@@ -1,0 +1,21 @@
+name: Build OpenYSM 1.21.1
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+      - run: chmod +x gradlew
+      - run: ./gradlew fabric:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenYSM-Updated-1.21.1-Fabric
+          path: fabric/build/libs/openysm-fabric-2.6.5.9.jar
