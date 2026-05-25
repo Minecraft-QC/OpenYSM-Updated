@@ -36,7 +36,7 @@ dependencies {
     include "dev.architectury:architectury-fabric:$rootProject.architectury_api_version"
 
    modImplementation files('../libs/forge-config-api-port.jar')
-   include files('../libs/forge-config-api-port.jar')"
+   include files('../libs/forge-config-api-port.jar')
     implementation "com.electronwill.night-config:core:3.8.1"
     implementation "com.electronwill.night-config:toml:3.8.1"
 
